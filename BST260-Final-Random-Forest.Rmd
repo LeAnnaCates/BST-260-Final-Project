@@ -1,0 +1,109 @@
+---
+title: "SuperZip Random Forest"
+author: "LeAnna Cates"
+date: "11/24/2019"
+output: html_document
+---
+
+```{r}
+library(data.table)
+library(dplyr)
+library(tidyverse)
+library(randomForest)
+library(ggplot2)
+require(caTools)
+library(party)
+```
+
+```{r}
+# download datasets
+zip_codes_states <- fread("https://raw.githubusercontent.com/rstudio/shiny-examples/master/063-superzip-example/data/zip_codes_states.csv")
+
+superzip <- fread("https://raw.githubusercontent.com/rstudio/shiny-examples/master/063-superzip-example/data/superzip.csv", header = TRUE)
+```
+
+```{r}
+# drop rows where rank is missing
+data <- na.omit(superzip)
+```
+
+```{r}
+# output classes for each covariate
+sapply(data, class)
+# transform into factors
+data$superzip <- as.factor(data$superzip)
+# remove percent sign from college
+data$college = as.numeric(gsub("[\\%,]", "", data$college))
+#remove city and state
+data = subset(data, select = -c(city,state, centile, rank))
+```
+
+
+```{r}
+# training model
+sample = sample.split(data$superzip, SplitRatio = .75)
+train = subset(data, sample == TRUE)
+test  = subset(data, sample == FALSE)
+
+dim(train)
+dim(test)
+```
+
+```{r}
+# initialize the random forest
+rf <- randomForest(superzip ~ ., data=train, keep.Forest = TRUE)
+rf
+```
+
+```{r}
+# use random forest to predict in our testing set if a superzip
+pred = predict(rf, newdata=test)
+```
+
+```{r}
+# generate confusion matrix
+library(caret)
+confusionMatrix(data=pred, reference = test$superzip)
+```
+
+```{r}
+plot(test$superzip, pred)
+```
+
+```{r}
+# plotting error rate in randomForest Model
+plot(rf, main = "Error Rate in randomForest Model predicting SuperZips")
+```
+
+```{r}
+# analyzing tree splits 
+getTree(rf)
+```
+
+```{r}
+# analyzing importance of covariates in predictive model
+importance(rf)
+```
+
+```{r}
+# generating random forest diagram
+library(reprtree)
+reprtree:::plot.getTree(rf)
+```
+
+
+```{r}
+library(tree)
+library(MASS)
+
+set.seed(1)
+# Fit a regression tree using all of the available predictiors
+fit = tree(superzip ~ ., data=train)  
+# Print a summary of the tree
+summary(fit)
+```
+```{r}
+# plot a single decision node from the random forest
+plot(fit, type = "uniform")
+text(fit, cex = 1)
+```
