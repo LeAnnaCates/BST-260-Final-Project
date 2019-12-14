@@ -67,10 +67,6 @@ confusionMatrix(data=pred, reference = test$superzip)
 ```
 
 ```{r}
-plot(test$superzip, pred)
-```
-
-```{r}
 # plotting error rate in randomForest Model
 plot(rf, main = "Error Rate in randomForest Model predicting SuperZips")
 ```
