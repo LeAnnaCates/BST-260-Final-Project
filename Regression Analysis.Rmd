@@ -1,0 +1,237 @@
+---
+title: "BST260 - Final Project - Regression Analysis"
+author: "LeAnna Cates | Alejandro Raña Custodio | Anshu Shroff"
+date: "15/DEC/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(comment = NA)
+```
+```{r, echo=FALSE, include=FALSE}
+library("tidyverse")
+library("ggplot2")
+library("ggthemes")
+library("ggrepel")
+library("gridExtra")
+library("ggformula")
+library("splines2")
+library("gam")
+library("foreign")
+library("ltm")
+library("nnet")
+library("VGAM")
+library("survival")
+library("survminer")
+library("My.stepwise")
+library("MASS")
+library("InformationValue")
+library("stargazer")
+library("nephro")
+library("caTools")
+library("ROCR")
+library("pROC")
+library("ResourceSelection")
+library("brglm")
+library("ModelGood")
+```
+
+## __1. First, we focus on the effects of a songle variable to predict income.__
+
+\bigskip
+
+```{r}
+## Importing the data file. 
+superzip <- read.delim(file.choose())
+
+## Create a Region variable.
+superzip$region <- 0
+superzip$region[superzip$state == "AK"] <- "west"
+superzip$region[superzip$state == "AZ"] <- "west"
+superzip$region[superzip$state == "CA"] <- "west"  
+superzip$region[superzip$state == "CO"] <- "west"
+superzip$region[superzip$state == "HI"] <- "west"
+superzip$region[superzip$state == "ID"] <- "west"
+superzip$region[superzip$state == "MT"] <- "west"
+superzip$region[superzip$state == "NV"] <- "west"
+superzip$region[superzip$state == "NM"] <- "west"  
+superzip$region[superzip$state == "OR"] <- "west"
+superzip$region[superzip$state == "UT"] <- "west"
+superzip$region[superzip$state == "WA"] <- "west"
+superzip$region[superzip$state == "WY"] <- "west"
+superzip$region[superzip$state == "IL"] <- "midwest"
+superzip$region[superzip$state == "IN"] <- "midwest"
+superzip$region[superzip$state == "IA"] <- "midwest" 
+superzip$region[superzip$state == "KS"] <- "midwest"
+superzip$region[superzip$state == "MI"] <- "midwest"
+superzip$region[superzip$state == "MO"] <- "midwest"
+superzip$region[superzip$state == "NE"] <- "midwest"
+superzip$region[superzip$state == "ND"] <- "midwest" 
+superzip$region[superzip$state == "OH"] <- "midwest"
+superzip$region[superzip$state == "SD"] <- "midwest"
+superzip$region[superzip$state == "WI"] <- "midwest"
+superzip$region[superzip$state == "AL"] <- "south"
+superzip$region[superzip$state == "AR"] <- "south"
+superzip$region[superzip$state == "DE"] <- "south"
+superzip$region[superzip$state == "FL"] <- "south"
+superzip$region[superzip$state == "GA"] <- "south"
+superzip$region[superzip$state == "KY"] <- "south"
+superzip$region[superzip$state == "LA"] <- "south"
+superzip$region[superzip$state == "MD"] <- "south"
+superzip$region[superzip$state == "MS"] <- "south"
+superzip$region[superzip$state == "OK"] <- "south"
+superzip$region[superzip$state == "NC"] <- "south"
+superzip$region[superzip$state == "SC"] <- "south"
+superzip$region[superzip$state == "TN"] <- "south"
+superzip$region[superzip$state == "TX"] <- "south"
+superzip$region[superzip$state == "VA"] <- "south"
+superzip$region[superzip$state == "WV"] <- "south"
+superzip$region[superzip$state == "CT"] <- "northeast"
+superzip$region[superzip$state == "ME"] <- "northeast"
+superzip$region[superzip$state == "MA"] <- "northeast"
+superzip$region[superzip$state == "NH"] <- "northeast"
+superzip$region[superzip$state == "NJ"] <- "northeast"
+superzip$region[superzip$state == "NY"] <- "northeast"
+superzip$region[superzip$state == "PA"] <- "northeast"
+superzip$region[superzip$state == "RI"] <- "northeast"
+superzip$region[superzip$state == "VT"] <- "northeast"
+
+## Generate a Simple Linear Regression Models.
+Model1 <- lm(income ~ college, data=superzip)
+summary(Model1)
+confint(Model1, level=0.95)
+
+Model2 <- lm(income ~ households, data=superzip)
+summary(Model2)
+confint(Model2, level=0.95)
+
+Model3 <- lm(income ~ state, data=superzip)
+summary(Model3)
+confint(Model3, level=0.95)
+
+Model4 <- lm(income ~ region, data=superzip)
+summary(Model4)
+confint(Model4, level=0.95)
+
+Model5 <- lm(income ~ adultpop, data=superzip)
+summary(Model5)
+confint(Model5, level=0.95)
+
+## Calculate the correlation between income and college (Pearson Correlation).
+superzip %>%
+  summarise(cor(income, college))
+```
+
+\bigskip
+
+```{r}
+## Generate a Lowess Curve to check for nonlinearity.
+plot(superzip$college, superzip$income, main="Lowess Smoother", xlab="College", ylab="Income")
+lines(lowess(superzip$income ~ superzip$college), col="red")
+```
+
+\bigskip
+
+_We do not have statistical evidence for a nonlinear effect of college to predict income._
+
+_1. The Lowess plot shows a linear relationship between age and total cholesterol._
+
+\bigskip
+
+```{r}
+## Check for confounding and EMM.
+Model1a <- lm(income ~ college + households, data=superzip)
+summary(Model1a)
+
+pct_change1a <- (((Model1$coefficients[2] - Model1a$coefficients[2])/Model1$coefficients[2]) * 100)
+pct_change1a
+
+Model1a_2 <- lm(income ~ college*households, data=superzip)
+summary(Model1a_2)
+
+Model1b <- lm(income ~ college + adultpop, data=superzip)
+summary(Model1b)
+
+pct_change1b <- (((Model1$coefficients[2] - Model1b$coefficients[2])/Model1$coefficients[2]) * 100)
+pct_change1b
+
+Model1b_2 <- lm(income ~ college*adultpop, data=superzip)
+summary(Model1b_2)
+
+Model1c <- lm(income ~ college + region, data=superzip)
+summary(Model1c)
+
+pct_change1c <- (((Model1$coefficients[2] - Model1b$coefficients[2])/Model1$coefficients[2]) * 100)
+pct_change1c
+
+Model1c_2 <- lm(income ~ college*region, data=superzip)
+summary(Model1c_2)
+```
+
+\bigskip
+
+```{r}
+## Generate a full regression model.
+ModelFull <- glm(income ~ college + adultpop + households + region, data=superzip)
+summary(ModelFull)
+confint(ModelFull, level=0.95)
+
+## Find the best predictive model based on AIC, through forward, backward and stepwise selection.
+mod_forw <- step(glm(income ~ 1, data = superzip), ~college + adultpop + region + households, direction = "forward")
+summary(mod_forw)
+
+# Backward Selection Procedure (using AIC)
+mod_back <- step(ModelFull, direction = "backward")
+summary(mod_back)
+
+# Stepwise Selection Procedure (using AIC)
+mod_step <- step(glm(income ~ 1, data = superzip), ~college + adultpop + region + households, direction = "both")
+summary(mod_step)
+```
+
+\bigskip
+
+```{r}
+## Create binary outcome variable for income
+superzip %>%
+  summarise(mean(income))
+
+superzip$incomebin <- 0
+superzip$incomebin[superzip$income >= mean(superzip$income)] <- 1
+
+## Split data into train and test
+set.seed(99)
+split <- sample.split(superzip, SplitRatio = 0.8)
+train <- subset(superzip, split == "TRUE")
+test <- subset(superzip, split == "FALSE")
+
+## Generate a full regression model.
+ModelFullbin <- lm(incomebin ~ college + adultpop + households + region, data=train, family=binomial)
+summary(ModelFullbin)
+
+## Backward Selection Procedure (using AIC)
+mod_backbin <- step(ModelFullbin, direction = "backward")
+summary(mod_backbin)
+
+## Stepwise Selection Procedure (using AIC)
+mod_stepbin <- step(ModelFullbin, direction = "both")
+summary(mod_stepbin)
+
+## Run the test data through the model
+Runtest <- predict(mod_backbin, test, type = "response")
+## Optimal cut off
+optCutOff <- optimalCutoff(test$incomebin, Runtest)[1]
+optCutOff
+## Misclassification Error
+misClassError(test$incomebin, Runtest, threshold = optCutOff)
+## Confusion Matrix
+confusionMatrix(test$incomebin, Runtest, threshold = optCutOff)
+## Validity Measurements
+sensitivity(test$incomebin, Runtest, threshold = optCutOff)
+specificity(test$incomebin, Runtest, threshold = optCutOff)
+## ROC Curve
+plotROC(test$incomebin, Runtest) 
+## Concordance
+Concordance(test$incomebin, Runtest)
+```
