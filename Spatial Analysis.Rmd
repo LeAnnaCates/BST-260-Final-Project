@@ -1,0 +1,87 @@
+---
+title: "BST260 - Final Project - Spatial Analysis"
+author: "LeAnna Cates | Alejandro Raña Custodio | Anshu Shroff"
+date: "15/DEC/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(comment = NA)
+```
+```{r, echo=FALSE}
+## Setting work directory.
+
+```
+```{r, echo=FALSE, include=FALSE}
+library("tidyverse")
+library("ggplot2")
+library("ggthemes")
+library("ggrepel")
+library("gridExtra")
+library("ggformula")
+library("ape")
+library("foreign")
+library("lctools")
+library("spdep")
+library("sf")
+library("splines2")
+library("gam")
+library("ltm")
+library("nnet")
+library("VGAM")
+library("survival")
+library("survminer")
+library("My.stepwise")
+library("MASS")
+library("stargazer")
+```
+
+## SuperZip Dataset
+
+\bigskip
+
+\textcolor{blue}{\textbf{For our final project we will be using the "superzip.csv" database. This dataset contains information on household income and education levels by zipcode.}}
+
+
+\textcolor{blue}{\textbf{The Washington Post analyzed census data to find Zip codes where people rank highest on a combination of income and education. They are Super Zips. The ranks, ranging from 0 to 99, represent the average of each Zip?s percentile rankings for median household income and for the share of adults with college degrees. Super Zips rank 95 or higher. This approach is adapted from one used by author Charles Murray.}}
+
+
+\textcolor{blue}{\textbf{Among the 650 super Zips, the typical household income is 120,272 USD, and 68\% of adults hold college degrees. That compares with 53,962 USD and 27\% for the remaining 23,925 Zips.}}
+
+\bigskip
+
+## Data Wrangling
+
+\bigskip
+
+\textcolor{blue}{\textbf{In order to perform some of the analyses, we will need spatial information on the zipcodes. For that, we need to merge our SuperZip dataset with one that has their spatial coordinates (latitud and longitud).}}
+
+\bigskip
+
+```{r}
+## Importing the SuperZip data file. 
+superzip <- read.csv("superzip.csv")
+
+## Importing the coordinates data file. 
+coordzip <- read.csv("us_zip_lat&long.csv")
+
+## Merging based on Zip code, and state.
+SuperZip <- inner_join(superzip, coordzip, by = c("zipcode", "state"))
+```
+
+\bigskip
+
+## Spatial Analysis
+
+\bigskip
+
+\textcolor{blue}{\textbf{Moran?s I is a measure of spatial autocorrelation?how related the values of a variable are based on the locations where they were measured.  Using functions in the ape library, we can calculate Moran?s I in R.}}
+
+
+\textcolor{blue}{\textbf{To calculate Moran?s I, we will need to generate a matrix of inverse distance weights.  In the matrix, entries for pairs of points that are close together are higher than for pairs of points that are far apart.  For simplicity, we will treat the latitude and longitude as values on a plane rather than on a sphere.}}
+
+
+\textcolor{blue}{\textbf{All the geospatial analyses were done using ArcGIS pro. Maps were created using GeoDa. A shapefile with the continental US divided by postal code sectors was used as the mold under which our anylises were created.}}
+
+\bigskip
